@@ -3,7 +3,7 @@
 <div class="flex flex-col items-center justify-center h-full">
     <h1 class="text-4xl font-bold text-gray-800 mb-8">Shorty</h1>
     <div class="w-full max-w-md">
-        <form id="url-form" class="mb-4">
+        <form id="url-form" class="mb-4" onsubmit="return false;">
             <label for="url" class="block text-sm font-medium text-gray-700 mb-2">Enter URL to shorten:</label>
             <input type="url" id="url" name="url" required
                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -23,10 +23,13 @@
             <button id="copy-btn" class="mt-2 w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                 Copy
             </button>
-            <div class="mt-4 text-center flex justify-center flex-col">
-                <p class="text-sm text-gray-600 mb-2">QR Code:</p>
-                <img id="qr-code" alt="QR Code" />
-            </div>
+             <div class="mt-4 text-center flex justify-center flex-col">
+                 <p class="text-sm text-gray-600 mb-2">QR Code:</p>
+                 <img id="qr-code" alt="QR Code" class="mx-auto" />
+                 <button id="download-qr-btn" class="mt-2 w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                     Download QR Code
+                 </button>
+             </div>
         </div>
         <div id="error" class="hidden mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm"></div>
     </div>
@@ -38,286 +41,325 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const urlInput = document.getElementById('url');
-    const urlError = document.getElementById('url-error');
-    const submitBtn = document.getElementById('submit-btn');
+(function() {
+    'use strict';
     
-    // Blocked domains/patterns for security
-    const blockedPatterns = [
-        /localhost/i,
-        /127\.0\.0\.1/,
-        /192\.168\./,
-        /10\./,
-        /172\.(1[6-9]|2[0-9]|3[0-1])\./,
-        /0\.0\.0\.0/,
-        /\:\d{1,5}$/, // Block URLs with port numbers (optional)
-    ];
-    
-    // Suspicious TLDs (optional, for additional security)
-    const suspiciousTLDs = ['.tk', '.ml', '.ga', '.cf', '.gq'];
-    
-    /**
-     * Comprehensive URL validation
-     */
-    function validateURL(url) {
-        // Remove whitespace
-        url = url.trim();
-        
-        // Check if empty
-        if (!url) {
-            return { valid: false, message: 'URL cannot be empty' };
-        }
-        
-        // Check minimum length
-        if (url.length < 10) {
-            return { valid: false, message: 'URL is too short (minimum 10 characters)' };
-        }
-        
-        // Check maximum length (most browsers support up to 2048)
-        if (url.length > 2048) {
-            return { valid: false, message: 'URL is too long (maximum 2048 characters)' };
-        }
-        
-        // Check if starts with http:// or https://
-        if (!url.match(/^https?:\/\//i)) {
-            return { valid: false, message: 'URL must start with http:// or https://' };
-        }
-        
-        // Parse URL
-        let parsedUrl;
-        try {
-            parsedUrl = new URL(url);
-        } catch (e) {
-            return { valid: false, message: 'Invalid URL format' };
-        }
-        
-        // Check if hostname exists
-        if (!parsedUrl.hostname || parsedUrl.hostname.length < 3) {
-            return { valid: false, message: 'Invalid domain name' };
-        }
-        
-        // Check for valid domain format (must have at least one dot)
-        if (!parsedUrl.hostname.includes('.')) {
-            return { valid: false, message: 'Domain must contain at least one dot (e.g., example.com)' };
-        }
-        
-        // Check for valid TLD (at least 2 characters after last dot)
-        const tld = parsedUrl.hostname.split('.').pop();
-        if (!tld || tld.length < 2) {
-            return { valid: false, message: 'Invalid top-level domain' };
-        }
-        
-        // Check for blocked patterns (localhost, private IPs, etc.)
-        for (let pattern of blockedPatterns) {
-            if (pattern.test(url) || pattern.test(parsedUrl.hostname)) {
-                return { valid: false, message: 'Cannot shorten private/local URLs' };
-            }
-        }
-        
-        // Check for suspicious TLDs (optional)
-        const hasSuspiciousTLD = suspiciousTLDs.some(tld => parsedUrl.hostname.toLowerCase().endsWith(tld));
-        if (hasSuspiciousTLD) {
-            return { valid: false, message: 'This domain extension is not supported' };
-        }
-        
-        // Check for invalid characters in URL
-        if (url.match(/[\s<>"{}|\\^`\[\]]/)) {
-            return { valid: false, message: 'URL contains invalid characters' };
-        }
-        
-        // Check for double slashes in path (security concern)
-        if (parsedUrl.pathname.includes('//')) {
-            return { valid: false, message: 'URL contains invalid path format' };
-        }
-        
-        // All checks passed
-        return { valid: true, message: '' };
+    // Wait for DOM to be fully loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
     }
     
-    /**
-     * Show validation error
-     */
-    function showValidationError(message) {
-        urlError.textContent = message;
-        urlError.classList.remove('hidden');
-        urlInput.classList.add('border-red-500');
-        urlInput.classList.remove('border-gray-300');
-        submitBtn.disabled = true;
-    }
-    
-    /**
-     * Clear validation error
-     */
-    function clearValidationError() {
-        urlError.textContent = '';
-        urlError.classList.add('hidden');
-        urlInput.classList.remove('border-red-500');
-        urlInput.classList.add('border-gray-300');
-        submitBtn.disabled = false;
-    }
-    
-    /**
-     * Real-time validation on input
-     */
-    urlInput.addEventListener('input', function() {
-        const url = this.value.trim();
+    function init() {
+        const urlInput = document.getElementById('url');
+        const urlError = document.getElementById('url-error');
+        const submitBtn = document.getElementById('submit-btn');
+        const urlForm = document.getElementById('url-form');
         
-        // Hide and clear previous results when user starts typing
-        const resultDiv = document.getElementById('result');
-        const shortUrlInput = document.getElementById('short-url');
-        const errorDiv = document.getElementById('error');
-        
-        if (!resultDiv.classList.contains('hidden')) {
-            resultDiv.classList.add('hidden');
-            shortUrlInput.value = '';
-        }
-        
-        if (!errorDiv.classList.contains('hidden')) {
-            errorDiv.classList.add('hidden');
-            errorDiv.textContent = '';
-        }
-        
-        // Only validate if user has typed something
-        if (url.length > 0) {
-            const validation = validateURL(url);
-            if (!validation.valid) {
-                showValidationError(validation.message);
-            } else {
-                clearValidationError();
-            }
-        } else {
-            clearValidationError();
-        }
-    });
-    
-    /**
-     * Validate on blur (when user leaves the field)
-     */
-    urlInput.addEventListener('blur', function() {
-        const url = this.value.trim();
-        if (url.length > 0) {
-            const validation = validateURL(url);
-            if (!validation.valid) {
-                showValidationError(validation.message);
-            }
-        }
-    });
-    
-    /**
-     * Copy to clipboard function
-     */
-    function copyToClipboard() {
-        const shortUrlInput = document.getElementById('short-url');
-        shortUrlInput.select();
-        shortUrlInput.setSelectionRange(0, 99999); // For mobile devices
-        
-        // Modern clipboard API with fallback
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(shortUrlInput.value).then(() => {
-                showToast();
-            }).catch(() => {
-                // Fallback to execCommand
-                document.execCommand('copy');
-                showToast();
-            });
-        } else {
-            document.execCommand('copy');
-            showToast();
-        }
-    }
-    
-    /**
-     * Show toast notification
-     */
-    function showToast() {
-        const toast = document.getElementById('toast');
-        if (toast) {
-            toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 2000);
-        }
-    }
-    
-    /**
-     * Form submission handler
-     */
-    document.getElementById('url-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const url = urlInput.value.trim();
-        const resultDiv = document.getElementById('result');
-        const errorDiv = document.getElementById('error');
-        const shortUrlInput = document.getElementById('short-url');
-        
-        // Final validation before submission
-        const validation = validateURL(url);
-        if (!validation.valid) {
-            showValidationError(validation.message);
+        if (!urlInput || !urlForm) {
+            console.error('Required form elements not found');
             return;
         }
         
-        // Clear any previous errors
-        clearValidationError();
+        // Blocked domains/patterns for security
+        const blockedPatterns = [
+            /localhost/i,
+            /127\.0\.0\.1/,
+            /192\.168\./,
+            /10\./,
+            /172\.(1[6-9]|2[0-9]|3[0-1])\./,
+            /0\.0\.0\.0/,
+            /\:\d{1,5}$/, // Block URLs with port numbers (optional)
+        ];
         
-        // Disable button and show loading state
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Shortening...';
-        resultDiv.classList.add('hidden');
-        errorDiv.classList.add('hidden');
+        // Suspicious TLDs (optional, for additional security)
+        const suspiciousTLDs = ['.tk', '.ml', '.ga', '.cf', '.gq'];
         
-        try {
-            const response = await fetch('/api/link', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ link: url })
-            });
+        /**
+         * Comprehensive URL validation
+         */
+        function validateURL(url) {
+            // Remove whitespace
+            url = url.trim();
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            // Check if empty
+            if (!url) {
+                return { valid: false, message: 'URL cannot be empty' };
             }
             
-            const data = await response.json();
-            
-        if (data.status === 'success') {
-            shortUrlInput.value = data.data.link;
-            document.getElementById('qr-code').src = `data:image/png;base64,${data.data.qr}`;
-            resultDiv.classList.remove('hidden');
-                
-                // Clear the input field after successful shortening
-                urlInput.value = '';
-            } else {
-                errorDiv.textContent = data.message || 'An error occurred while shortening the URL';
-                errorDiv.classList.remove('hidden');
+            // Check minimum length
+            if (url.length < 10) {
+                return { valid: false, message: 'URL is too short (minimum 10 characters)' };
             }
-        } catch (error) {
-            console.error('Error:', error);
-            errorDiv.textContent = 'Failed to shorten URL. Please check your connection and try again.';
-            errorDiv.classList.remove('hidden');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Shorten URL';
+            
+            // Check maximum length (most browsers support up to 2048)
+            if (url.length > 2048) {
+                return { valid: false, message: 'URL is too long (maximum 2048 characters)' };
+            }
+            
+            // Check if starts with http:// or https://
+            if (!url.match(/^https?:\/\//i)) {
+                return { valid: false, message: 'URL must start with http:// or https://' };
+            }
+            
+            // Parse URL
+            let parsedUrl;
+            try {
+                parsedUrl = new URL(url);
+            } catch (e) {
+                return { valid: false, message: 'Invalid URL format' };
+            }
+            
+            // Check if hostname exists
+            if (!parsedUrl.hostname || parsedUrl.hostname.length < 3) {
+                return { valid: false, message: 'Invalid domain name' };
+            }
+            
+            // Check for valid domain format (must have at least one dot)
+            if (!parsedUrl.hostname.includes('.')) {
+                return { valid: false, message: 'Domain must contain at least one dot (e.g., example.com)' };
+            }
+            
+            // Check for valid TLD (at least 2 characters after last dot)
+            const tld = parsedUrl.hostname.split('.').pop();
+            if (!tld || tld.length < 2) {
+                return { valid: false, message: 'Invalid top-level domain' };
+            }
+            
+            // Check for blocked patterns (localhost, private IPs, etc.)
+            for (let pattern of blockedPatterns) {
+                if (pattern.test(url) || pattern.test(parsedUrl.hostname)) {
+                    return { valid: false, message: 'Cannot shorten private/local URLs' };
+                }
+            }
+            
+            // Check for suspicious TLDs (optional)
+            const hasSuspiciousTLD = suspiciousTLDs.some(tld => parsedUrl.hostname.toLowerCase().endsWith(tld));
+            if (hasSuspiciousTLD) {
+                return { valid: false, message: 'This domain extension is not supported' };
+            }
+            
+            // Check for invalid characters in URL
+            if (url.match(/[\s<>"{}|\\^`\[\]]/)) {
+                return { valid: false, message: 'URL contains invalid characters' };
+            }
+            
+            // Check for double slashes in path (security concern)
+            if (parsedUrl.pathname.includes('//')) {
+                return { valid: false, message: 'URL contains invalid path format' };
+            }
+            
+            // All checks passed
+            return { valid: true, message: '' };
         }
-    });
-    
-    /**
-     * Copy button click handler
-     */
-    document.getElementById('copy-btn').addEventListener('click', copyToClipboard);
-    
-    /**
-     * Allow Enter key to trigger copy when result is shown
-     */
-    document.addEventListener('keydown', function(e) {
-        const resultDiv = document.getElementById('result');
-        if (e.key === 'Enter' && !resultDiv.classList.contains('hidden')) {
+        
+        /**
+         * Show validation error
+         */
+        function showValidationError(message) {
+            urlError.textContent = message;
+            urlError.classList.remove('hidden');
+            urlInput.classList.add('border-red-500');
+            urlInput.classList.remove('border-gray-300');
+            submitBtn.disabled = true;
+        }
+        
+        /**
+         * Clear validation error
+         */
+        function clearValidationError() {
+            urlError.textContent = '';
+            urlError.classList.add('hidden');
+            urlInput.classList.remove('border-red-500');
+            urlInput.classList.add('border-gray-300');
+            submitBtn.disabled = false;
+        }
+        
+        /**
+         * Real-time validation on input
+         */
+        urlInput.addEventListener('input', function() {
+            const url = this.value.trim();
+            
+            // Hide and clear previous results when user starts typing
+            const resultDiv = document.getElementById('result');
+            const shortUrlInput = document.getElementById('short-url');
+            const errorDiv = document.getElementById('error');
+            
+            if (!resultDiv.classList.contains('hidden')) {
+                resultDiv.classList.add('hidden');
+                shortUrlInput.value = '';
+            }
+            
+            if (!errorDiv.classList.contains('hidden')) {
+                errorDiv.classList.add('hidden');
+                errorDiv.textContent = '';
+            }
+            
+            // Only validate if user has typed something
+            if (url.length > 0) {
+                const validation = validateURL(url);
+                if (!validation.valid) {
+                    showValidationError(validation.message);
+                } else {
+                    clearValidationError();
+                }
+            } else {
+                clearValidationError();
+            }
+        });
+        
+        /**
+         * Validate on blur (when user leaves the field)
+         */
+        urlInput.addEventListener('blur', function() {
+            const url = this.value.trim();
+            if (url.length > 0) {
+                const validation = validateURL(url);
+                if (!validation.valid) {
+                    showValidationError(validation.message);
+                }
+            }
+        });
+        
+        /**
+         * Copy to clipboard function
+         */
+        function copyToClipboard() {
+            const shortUrlInput = document.getElementById('short-url');
+            shortUrlInput.select();
+            shortUrlInput.setSelectionRange(0, 99999); // For mobile devices
+            
+            // Modern clipboard API with fallback
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(shortUrlInput.value).then(() => {
+                    showToast();
+                }).catch(() => {
+                    // Fallback to execCommand
+                    document.execCommand('copy');
+                    showToast();
+                });
+            } else {
+                document.execCommand('copy');
+                showToast();
+            }
+        }
+        
+        /**
+         * Show toast notification
+         */
+        function showToast() {
+            const toast = document.getElementById('toast');
+            if (toast) {
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 2000);
+            }
+        }
+        
+        /**
+         * Form submission handler
+         */
+        urlForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const url = urlInput.value.trim();
+            const resultDiv = document.getElementById('result');
+            const errorDiv = document.getElementById('error');
+            const shortUrlInput = document.getElementById('short-url');
+            
+            // Final validation before submission
+            const validation = validateURL(url);
+            if (!validation.valid) {
+                showValidationError(validation.message);
+                return false;
+            }
+            
+            // Clear any previous errors
+            clearValidationError();
+            
+            // Disable button and show loading state
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Shortening...';
+            resultDiv.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+            
+            try {
+                const response = await fetch('/api/link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ link: url })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    shortUrlInput.value = data.data.link;
+                    document.getElementById('qr-code').src = `data:image/png;base64,${data.data.qr}`;
+                    resultDiv.classList.remove('hidden');
+                    
+                    // Clear the input field after successful shortening
+                    urlInput.value = '';
+                } else {
+                    errorDiv.textContent = data.message || 'An error occurred while shortening the URL';
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorDiv.textContent = 'Failed to shorten URL. Please check your connection and try again.';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Shorten URL';
+            }
+            
+            return false;
+        });
+        
+        /**
+         * Copy button click handler
+         */
+        document.getElementById('copy-btn').addEventListener('click', function(e) {
             e.preventDefault();
             copyToClipboard();
-        }
-    });
-});
+        });
+
+        /**
+         * Download QR code button click handler
+         */
+        document.getElementById('download-qr-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            const qrImg = document.getElementById('qr-code');
+            if (qrImg.src && qrImg.src.startsWith('data:')) {
+                const link = document.createElement('a');
+                link.download = 'qr-code.png';
+                link.href = qrImg.src;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        });
+        
+        /**
+         * Allow Enter key to trigger copy when result is shown
+         */
+        document.addEventListener('keydown', function(e) {
+            const resultDiv = document.getElementById('result');
+            if (e.key === 'Enter' && !resultDiv.classList.contains('hidden')) {
+                e.preventDefault();
+                copyToClipboard();
+            }
+        });
+    }
+})();
 </script>
 {% endblock content %}
