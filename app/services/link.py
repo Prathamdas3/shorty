@@ -71,7 +71,7 @@ class LinkService:
             statement = select(Links).where(Links.sort_id == sort_id)
             old_link = self._db.exec(statement=statement).one_or_none()
             if not old_link:
-                return {"link": f"{config.frontend_url}/404"}
+                return f"{config.frontend_url}/404"
 
             old_link.clicks = old_link.clicks + 1
             old_link.last_accessed_at = datetime.now()

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shorty</title>
+</head>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+<body class=" bg-stone-100/75 ">
+    <div class="max-w-screen-sm mx-auto h-screen flex flex-col">
+        <main class="flex-1">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="text-center text-gray-500 text-sm py-4">
+            <p>&copy; {{ year }} Shorty. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+
+</html>

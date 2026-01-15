@@ -9,18 +9,18 @@ class SortIDInput(CustomBaseModel):
     sort_id: str
 
     @field_validator("sort_id", mode="before")
-    def check_id(cls, v, field):
+    def check_id(cls, v, info):
         if not v:
-            raise ValueError(f"{field.name} missing")
+            raise ValueError(f"{info.field_name} missing")
 
         if not isinstance(v, str):
-            raise TypeError(f"{field.name} must be of type string")
+            raise TypeError(f"{info.field_name} must be of type string")
 
         if not v.strip():
-            raise ValueError(f"{field.name} can not be empty")
+            raise ValueError(f"{info.field_name} can not be empty")
 
         if len(v) != 7:
-            raise ValueError(f"{field.name} must be of length 7")
+            raise ValueError(f"{info.field_name} must be of length 7")
 
         return v
 
@@ -29,7 +29,7 @@ class OriginalUrlInput(CustomBaseModel):
     link: AnyHttpUrl
 
     @field_validator("link")
-    def check_link(cls, v, field):
+    def check_link(cls, v, info):
         parsed = urlparse(str(v))
 
         # Scheme check
