@@ -23,9 +23,9 @@
             <button id="copy-btn" class="mt-2 w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
                 Copy
             </button>
-            <div class="mt-4 text-center">
+            <div class="mt-4 text-center flex justify-center flex-col">
                 <p class="text-sm text-gray-600 mb-2">QR Code:</p>
-                <canvas id="qr-code"></canvas>
+                <img id="qr-code" alt="QR Code" />
             </div>
         </div>
         <div id="error" class="hidden mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm"></div>
@@ -282,10 +282,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const data = await response.json();
             
-            if (data.status === 'success') {
-                shortUrlInput.value = data.data.link;
-                // QRCode.toCanvas(document.getElementById('qr-code'), data.data.link);
-                resultDiv.classList.remove('hidden');
+        if (data.status === 'success') {
+            shortUrlInput.value = data.data.link;
+            document.getElementById('qr-code').src = `data:image/png;base64,${data.data.qr}`;
+            resultDiv.classList.remove('hidden');
                 
                 // Clear the input field after successful shortening
                 urlInput.value = '';

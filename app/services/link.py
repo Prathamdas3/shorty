@@ -1,7 +1,6 @@
 from sqlmodel import select, Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from datetime import datetime
-from typing import TypedDict
 from app.db.schema import Links
 from app.core.logger import get_logger
 from app.core.exception import DbException, AppException
@@ -13,15 +12,34 @@ logger = get_logger(__name__)
 ALPHABET = string.ascii_letters + string.digits
 
 
-class ReturnLinkDict(TypedDict):
-    link: str
-
 
 class LinkService:
+    """
+    Service class for managing URL shortening operations.
+
+    Handles creation of short links, retrieval of original URLs,
+    and database interactions for link management.
+    """
+
     def __init__(self, session: Session):
+        """
+        Initialize the LinkService with a database session.
+
+        Args:
+            session (Session): SQLAlchemy database session.
+        """
         self._db = session
 
     def _commit(self) -> None:
+        """
+        Commit database changes with error handling.
+
+        Attempts to commit the current transaction. Rolls back on failure
+        and raises a DbException.
+
+        Raises:
+            DbException: If the commit operation fails.
+        """
         try:
             self._db.commit()
         except (IntegrityError, SQLAlchemyError) as e:
@@ -30,16 +48,33 @@ class LinkService:
             raise DbException(f"Database operation failed {str(e)}")
 
     def _create_unique_id(self, length: int = 7) -> str:
-        return "".join(secrets.choice(ALPHABET) for _ in range(length))
-
-    def generate_new_link(self, original_link: str) -> ReturnLinkDict:
-        """Creating new link form the original link
+        """
+        Generate a unique random ID of specified length.
 
         Args:
-            original_link (str): it takes the original link
+            length (int): Length of the ID to generate. Defaults to 7.
 
         Returns:
-            dict: returns dict with a field of link
+            str: Randomly generated unique ID.
+        """
+        return "".join(secrets.choice(ALPHABET) for _ in range(length))
+
+    def generate_new_link(self, original_link: str) -> str:
+        """
+        Create a new short link for the given original URL.
+
+        Generates a unique short ID, stores the link in the database,
+        and returns the short link URL.
+
+        Args:
+            original_link (str): The original URL to shorten.
+
+        Returns:
+            Short link URL as str.
+
+        Raises:
+            DbException: If database operations fail.
+            AppException: If link generation fails.
         """
         try:
             sort_id = self._create_unique_id()
@@ -49,23 +84,28 @@ class LinkService:
             self._db.refresh(new_link)
 
             logger.debug(f"New link created successfully with id {new_link.id}")
-            return {"link": f"{config.frontend_url}/{sort_id}"}
+            return f"{config.frontend_url}/{sort_id}"
 
         except Exception as e:
             logger.error(f"Failed to generate new link {str(e)}")
             raise AppException("Failed to generate a new link")
 
-    def get_original_link(self, sort_id: str):
-        """Recives a sort id and finds the original url based on that id
+    def get_original_link(self, sort_id: str) -> str:
+        """
+        Retrieve the original URL for a given short ID.
+
+        Increments the click count and updates the last accessed timestamp.
+        Returns the 404 page URL if the short ID is not found.
 
         Args:
-            sort_id (str): sort id associated with the original url
-
-        Raises:
-            AppException: Faild to perform the operation to find the original link
+            sort_id (str): The short ID to look up.
 
         Returns:
-            ReturnLinkDict: Returns link as the only field
+            str: The original URL or 404 page URL if not found.
+
+        Raises:
+            DbException: If database operations fail.
+            AppException: If retrieval fails.
         """
         try:
             statement = select(Links).where(Links.sort_id == sort_id)
