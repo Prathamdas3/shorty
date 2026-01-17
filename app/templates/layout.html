@@ -4,7 +4,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shorty</title>
+
+    {% set page_title = page_title if page_title else "Shorty - URL Shortener & QR Code Generator" %}
+    {% set page_description = page_description if page_description else config.site_description %}
+    {% set canonical_url = canonical_url if canonical_url else config.site_url %}
+
+    <title>{{ page_title }}</title>
+
+    <meta name="description" content="{{ page_description }}">
+    <meta name="keywords" content="{{ config.site_keywords }}">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="Shorty">
+
+    <link rel="canonical" href="{{ canonical_url }}">
+
+    <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
+    <link rel="manifest" href="/static/site.webmanifest">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ page_title }}">
+    <meta property="og:description" content="{{ page_description }}">
+    <meta property="og:image" content="{{ config.site_url }}{{ config.og_image_url }}">
+    <meta property="og:url" content="{{ canonical_url }}">
+    <meta property="og:site_name" content="Shorty">
+    <meta property="og:locale" content="en_US">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ page_title }}">
+    <meta name="twitter:description" content="{{ page_description }}">
+    <meta name="twitter:image" content="{{ config.site_url }}{{ config.og_image_url }}">
+    <meta name="twitter:site" content="@shorty">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Shorty",
+        "description": "{{ config.site_description }}",
+        "url": "{{ config.site_url }}",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "Free URL shortening service"
+        },
+        "author": {
+            "@type": "Organization",
+            "name": "Shorty",
+            "url": "{{ config.site_url }}",
+            "sameAs": [
+                "{{ config.social_github }}",
+                "{{ config.social_twitter }}",
+                "{{ config.social_linkedin }}"
+            ]
+        }
+    }
+    </script>
 </head>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 

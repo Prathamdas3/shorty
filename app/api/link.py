@@ -1,5 +1,5 @@
 from urllib.parse import urlparse
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Request
 from app.models.response import Response, Status
 from app.models.input import OriginalUrlInput
 from app.services.link import LinkService
@@ -7,6 +7,7 @@ from app.db.init import SessionDep
 from app.services.qr import QrGeneratorService
 import base64
 from io import BytesIO
+from app.core.rate_limit import rate_limit
 
 router = APIRouter(prefix="/api")
 
@@ -29,7 +30,9 @@ def normalize_url(url: str) -> str:
 
 
 @router.post("/link", status_code=status.HTTP_200_OK, response_model=Response)
+@rate_limit(times=5, seconds=60)
 def generate_new_link(
+    request: Request,
     url: OriginalUrlInput,
     session: SessionDep,
 ):

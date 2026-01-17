@@ -1,0 +1,42 @@
+.dockerignore
+.git
+.DS_Store
+.vscode
+
+# Build artifacts
+*.pyc
+*.so
+*.egg
+*.whl
+
+# Local settings
+.env
+.env.local
+.env.development
+.env.test
+.env.example
+.env.production
+local.properties
+
+# IDE files
+.idea
+*.iml
+.classpath
+.project
+
+# Log files
+*.log
+*.err
+logs/
+
+# Test directories
+test
+tests/
+coverage
+.pytest_cache
+.ruff_cache
+htmlcov/
+
+# Virtual environment
+.venv
+venv

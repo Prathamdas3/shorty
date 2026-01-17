@@ -11,3 +11,4 @@ wheels/
 .env
 db.db
 logs/
+htmlcov/

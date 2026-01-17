@@ -1,0 +1,66 @@
+# Shorty - URL Shortener Service
+
+**Summary:** Shorty is a free, fast URL shortener with built-in QR code generation. Shorten long URLs instantly and generate QR codes for easy sharing.
+
+**Key Features:**
+- Instant URL shortening with 7-character unique codes
+- Automatic QR code generation for every shortened URL
+- Click tracking and analytics
+- Secure URL validation (blocks private IPs, localhost)
+- RESTful API for developers
+- Fast and reliable redirects (301 permanent redirects)
+
+**Use Cases:**
+- Social media link sharing
+- Marketing campaigns with trackable links
+- Business cards with QR codes
+- Email campaigns with concise URLs
+- Developer API integration for applications
+- Affiliate marketing with custom short links
+
+**Technical Details:**
+- Built with FastAPI and Python
+- PostgreSQL database for reliable storage
+- 7-character alphanumeric short codes (62^7 possibilities)
+- 301 permanent redirects for SEO benefits
+- Rate limiting enabled for fair usage
+- Comprehensive input validation and security
+
+**API Features:**
+- RESTful API endpoint at /api/link
+- JSON response format with status, data, and message
+- Returns short URL and base64-encoded QR code image
+- URL validation (http/https only, blocks private IPs)
+
+**Security:**
+- Blocks localhost and private IP addresses
+- URL length validation (up to 2048 characters)
+- HTTP/HTTPS scheme validation only
+- Rate limiting per IP address
+
+**Contact:** http://localhost:8080/
+**Repository:** https://github.com/
+**License:** MIT
+**Last Updated:** 2026-01-17
+
+**Getting Started:**
+1. Visit http://localhost:8080/
+2. Enter your long URL
+3. Get your shortened link and QR code instantly
+4. Share anywhere!
+
+**Developer Integration:**
+POST /api/link with JSON body:
+{
+  "link": "https://example.com/your-long-url"
+}
+
+Response:
+{
+  "status": "success",
+  "data": {
+    "link": "http://localhost:8080/AbCdEfG",
+    "qr": "base64-encoded-png-image"
+  },
+  "message": "Successfully generated the link"
+}

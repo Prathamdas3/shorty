@@ -1,4 +1,8 @@
 {% extends "layout.html" %}
+{% set page_title = "404 - Page Not Found | Shorty" %}
+{% set page_description = "The page you're looking for doesn't exist or has been moved. Return to Shorty homepage." %}
+{% set canonical_url = config.site_url + "/404" %}
+
 {% block content %}
 <div class="flex flex-col items-center justify-center h-full text-center">
     <h1 class="text-6xl font-bold text-gray-800 mb-4">404</h1>

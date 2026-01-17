@@ -1,4 +1,8 @@
 {% extends "layout.html" %}
+{% set page_title = "Shorty - URL Shortener & QR Code Generator" %}
+{% set page_description = config.site_description %}
+{% set canonical_url = config.site_url + "/" %}
+
 {% block content %}
 <div class="flex flex-col items-center justify-center h-full">
     <h1 class="text-4xl font-bold text-gray-800 mb-8">Shorty</h1>
@@ -35,8 +39,8 @@
     </div>
     
     <!-- Toast notification -->
-    <div id="toast" class="hidden fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-md shadow-lg transition-opacity">
-        Copied to clipboard!
+    <div id="toast" class="hidden fixed bottom-4 right-4 px-6 py-3 rounded-md shadow-lg transition-opacity">
+        <p id="toast-message"></p>
     </div>
 </div>
 
@@ -234,28 +238,53 @@
             // Modern clipboard API with fallback
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(shortUrlInput.value).then(() => {
-                    showToast();
+                    showToast('Copied to clipboard!', 'success');
                 }).catch(() => {
                     // Fallback to execCommand
                     document.execCommand('copy');
-                    showToast();
+                    showToast('Copied to clipboard!', 'success');
                 });
             } else {
                 document.execCommand('copy');
-                showToast();
+                showToast('Copied to clipboard!', 'success');
             }
         }
         
         /**
-         * Show toast notification
+         * Show toast notification with type (success, error, warning)
          */
-        function showToast() {
+        function showToast(message, type = 'success', duration = 2000) {
             const toast = document.getElementById('toast');
-            if (toast) {
+            const toastMessage = document.getElementById('toast-message');
+            
+            if (toast && toastMessage) {
+                // Remove all type classes
+                toast.classList.remove('bg-green-600', 'bg-red-600', 'bg-yellow-600', 'bg-blue-600');
+                
+                // Add appropriate background color based on type
+                switch(type) {
+                    case 'success':
+                        toast.classList.add('bg-green-600', 'text-white');
+                        break;
+                    case 'error':
+                        toast.classList.add('bg-red-600', 'text-white');
+                        break;
+                    case 'warning':
+                        toast.classList.add('bg-yellow-600', 'text-white');
+                        break;
+                    case 'info':
+                        toast.classList.add('bg-blue-600', 'text-white');
+                        break;
+                    default:
+                        toast.classList.add('bg-green-600', 'text-white');
+                }
+                
+                toastMessage.textContent = message;
                 toast.classList.remove('hidden');
+                
                 setTimeout(() => {
                     toast.classList.add('hidden');
-                }, 2000);
+                }, duration);
             }
         }
         
@@ -296,11 +325,18 @@
                     body: JSON.stringify({ link: url })
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                
+                // Handle rate limit error (429)
+                if (response.status === 429) {
+                    const retryAfter = data.detail?.retry_after || data.retry_after || 60;
+                    showToast(`Rate limit exceeded! Please wait ${retryAfter} seconds before trying again.`, 'error', 4000);
+                    return;
                 }
                 
-                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                }
                 
                 if (data.status === 'success') {
                     shortUrlInput.value = data.data.link;
@@ -315,7 +351,7 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                errorDiv.textContent = 'Failed to shorten URL. Please check your connection and try again.';
+                errorDiv.textContent = error.message || 'Failed to shorten URL. Please check your connection and try again.';
                 errorDiv.classList.remove('hidden');
             } finally {
                 submitBtn.disabled = false;

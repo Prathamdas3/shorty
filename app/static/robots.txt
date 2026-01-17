@@ -1,0 +1,32 @@
+# Allow search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Allow AI crawlers for training
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# Block sensitive areas
+User-agent: *
+Disallow: /api/
+Disallow: /docs
+Disallow: /admin/
+Disallow: /logs/
+
+# Sitemap location
+Sitemap: http://localhost:8080/sitemap.xml
