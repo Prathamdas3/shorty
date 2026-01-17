@@ -12,3 +12,4 @@ wheels/
 db.db
 logs/
 htmlcov/
+.DS_Store
