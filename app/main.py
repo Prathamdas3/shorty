@@ -1,6 +1,11 @@
 from datetime import datetime
 from fastapi import FastAPI, Request, status
-from fastapi.responses import RedirectResponse, PlainTextResponse, Response
+from fastapi.responses import (
+    RedirectResponse,
+    PlainTextResponse,
+    Response,
+    FileResponse,
+)
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
@@ -42,7 +47,7 @@ app.add_exception_handler(LinkNotFound, link_not_found_handler)
 
 
 @app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
+def general_exception_handler(request: Request, exc: Exception):
     """
     Handle unhandled exceptions by logging and rendering the 404 page.
 
@@ -64,7 +69,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 
 @app.get("/robots.txt", response_class=PlainTextResponse)
-async def robots_txt():
+def robots_txt():
     """
     Serve robots.txt file for search engines and AI crawlers.
 
@@ -113,7 +118,7 @@ Sitemap: {site_url}/sitemap.xml
 
 
 @app.get("/sitemap.xml", response_class=Response)
-async def sitemap_xml():
+def sitemap_xml():
     """
     Generate dynamic sitemap.xml for search engines.
 
@@ -167,7 +172,7 @@ app.include_router(router=router)
 
 # root level routes
 @app.get("/", status_code=status.HTTP_200_OK)
-async def handle_home_page(request: Request):
+def handle_home_page(request: Request):
     """
     Render the home page with the URL shortening form.
 
@@ -188,8 +193,13 @@ async def handle_home_page(request: Request):
     )
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse("static/icons/favicon.ico")
+
+
 @app.get("/404", status_code=status.HTTP_404_NOT_FOUND)
-async def handle_404_page(request: Request):
+def handle_404_page(request: Request):
     """
     Render the 404 error page for invalid short URLs.
 
@@ -211,7 +221,7 @@ async def handle_404_page(request: Request):
 
 
 @app.get("/{short_id}")
-async def redirect_short_id(short_id: str, session: SessionDep):
+def redirect_short_id(short_id: str, session: SessionDep):
     """
     Redirect to the original URL for a given short ID.
 

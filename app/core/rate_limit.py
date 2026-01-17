@@ -1,4 +1,3 @@
-import asyncio
 import time
 from functools import wraps
 from typing import Callable, Any, Dict, List
@@ -11,7 +10,7 @@ logger = get_logger(__name__)
 _rate_limit_storage: Dict[str, List[float]] = {}
 
 
-async def get_identifier(request: Request) -> str:
+def get_identifier(request: Request) -> str:
     """Get client identifier (IP address)."""
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
@@ -30,12 +29,12 @@ def rate_limit(times: int, seconds: int):
     Usage:
         @app.post("/login")
         @rate_limit(times=5, seconds=60)
-        async def login(request: Request, ...):
+        def login(request: Request, ...):
             pass
     """
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Find the Request object
             request = None
             
@@ -56,7 +55,7 @@ def rate_limit(times: int, seconds: int):
                 )
             
             # Get client identifier
-            identifier = await get_identifier(request)
+            identifier = get_identifier(request)
             
             # Create a unique key for this endpoint and client
             key = f"{func.__name__}:{identifier}"
@@ -97,11 +96,8 @@ def rate_limit(times: int, seconds: int):
             if len(_rate_limit_storage) % 100 == 0:
                 _cleanup_old_entries(seconds)
             
-            # Call the original function
-            if asyncio.iscoroutinefunction(func):
-                return await func(*args, **kwargs)
-            else:
-                return func(*args, **kwargs)
+            # Call the original function (no await)
+            return func(*args, **kwargs)
         
         return wrapper
     return decorator

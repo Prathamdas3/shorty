@@ -10,16 +10,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
+      test: [ "CMD-SHELL", "pg_isready -U appuser -d appdb" ]
       interval: 5s
       timeout: 5s
       retries: 5
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: shorty-backend:dev
+    image: pratham003/shorty:0.1.0
     ports:
       - "8080:8080"
     depends_on:
@@ -30,6 +27,12 @@ services:
       DEBUG: "false"
       FRONTEND_URL: http://localhost:8080
       DATABASE_URL: postgresql://appuser:apppassword@db:5432/appdb
+      OG_IMAGE_URL: /static/icons/og_image.png
+      SOCIAL_GITHUB: https://github.com/Prathamdas3
+      SOCIAL_TWITTER: https://twitter.com/prathamdas28
+      SOCIAL_LINKEDIN: https://linkedin.com/in/prathamdas28
+      SITE_DESCRIPTION: Shorty is a free URL shortener with QR code generation. Shorten long URLs instantly and generate QR codes for easy sharing.
+      SITE_KEYWORDS: url shortener, qr code generator, link shortening, free url shortener, qr codes, url redirect
     restart: unless-stopped
 
 volumes:
