@@ -62,6 +62,13 @@ Whether you're running a marketing campaign, building a SaaS product, or just wa
 
 ### Docker (Recommended)
 ```bash
+# Option 1: Pull the pre-built Docker image
+docker pull pratham003/shorty:latest
+docker run -p 8080:8080 --env-file .env pratham003/shorty:latest
+```
+
+```bash
+# Option 2: Build and run with Docker Compose
 # Clone the repository
 git clone https://github.com/Prathamdas3/shorty
 cd shorty
@@ -81,17 +88,17 @@ That's it! Shorty will be running at `http://localhost:8080`.
 ### Manual Setup
 ```bash
 # Install Python dependencies
-pip install -r requirements.txt
+uv sync
 
 # Set up environment variables
 cp .env.example .env
 # Edit .env file with your database URL and settings
 
 # Run database migrations
-alembic upgrade head
+uv run alembic upgrade head
 
 # Start the application
-uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload
 ```
 
 ---
@@ -169,20 +176,20 @@ Redirect to the original URL (automatic redirect).
 
 ### Local Development Setup
 ```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
+# Install dependencies (including dev dependencies)
+uv sync
 
 # Run tests
-pytest
+uv run pytest
 
 # Run with coverage
-pytest --cov=app --cov-report=html
+uv run pytest --cov=app --cov-report=html
 
 # Lint code
-ruff check .
+uv run ruff check .
 
 # Format code
-ruff format .
+uv run ruff format .
 ```
 
 ### Project Structure
