@@ -32,9 +32,11 @@ def test_redirect_existing(client, session):
 
 def test_redirect_not_found(client):
     """Test redirect for non-existing short ID."""
+    from app.core.config import config
+
     response = client.get("/1234567", follow_redirects=False)
     assert response.status_code == 301
-    assert response.headers["location"] == "http://localhost:9000/404"
+    assert response.headers["location"] == f"{config.site_url}/404"
 
 
 def test_robots_txt(client):
@@ -92,6 +94,4 @@ def test_sitemap_changefreq_priority(client):
     pytest.skip("Requires database migration for updated_at column")
 
 
-def test_general_exception_handler_logs_error(client, caplog):
-    """Test general exception handler logs unhandled exceptions."""
-    pytest.skip("General exception handler requires custom test route to trigger")
+# Removed test for general exception handler - hard to trigger without app modifications

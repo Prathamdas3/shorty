@@ -7,26 +7,25 @@ logger = get_logger(__name__)
 
 class AppException(Exception):
     """Base exception for the application"""
-
     pass
 
 
 class LinkNotFound(AppException):
     """Raised when link is not found"""
-
     pass
 
 
 class DbException(AppException):
     """Raised when an db error gets"""
-
     pass
 
 
-def link_not_found_handler(request: Request, exc: LinkNotFound) -> JSONResponse:
+def link_not_found_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handler for LinkNotFound exception"""
+    # Type narrowing - we know it's LinkNotFound at runtime
+    assert isinstance(exc, LinkNotFound)
+    
     logger.warning(f"Link not found: {str(exc)} - Path: {request.url.path}")
-
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={
@@ -36,12 +35,14 @@ def link_not_found_handler(request: Request, exc: LinkNotFound) -> JSONResponse:
     )
 
 
-def db_exception_handler(request: Request, exc: DbException) -> JSONResponse:
+def db_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handler for database exceptions"""
+    # Type narrowing - we know it's DbException at runtime
+    assert isinstance(exc, DbException)
+    
     logger.error(
         f"Database error: {str(exc)} - Path: {request.url.path}", exc_info=True
     )
-
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -51,12 +52,14 @@ def db_exception_handler(request: Request, exc: DbException) -> JSONResponse:
     )
 
 
-def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+def app_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handler for general application exceptions"""
+    # Type narrowing - we know it's AppException at runtime
+    assert isinstance(exc, AppException)
+    
     logger.error(
         f"Application error: {str(exc)} - Path: {request.url.path}", exc_info=True
     )
-
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={

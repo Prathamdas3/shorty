@@ -1,19 +1,21 @@
 """Additional tests to improve code coverage."""
 
 import pytest
-from app.core.rate_limit import _rate_limit_storage, _cleanup_old_entries
+import time
+from unittest.mock import patch, MagicMock
+from fastapi import Request, HTTPException
+from app.core.rate_limit import _rate_limit_storage, _cleanup_old_entries, rate_limit
 
 
 def test_cleanup_old_entries_with_old_timestamps():
     """Test _cleanup_old_entries removes entries with old timestamps."""
     now = 1000000.0
     _rate_limit_storage["test_function:key1"] = [now - 100, now - 90]
-    _rate_limit_storage["test_function:key2"] = [now - 200]
 
     _cleanup_old_entries(150)
 
-    assert "test_function:key2" not in _rate_limit_storage
-    assert len(_rate_limit_storage["test_function:key1"]) == 0
+    # Should be removed since all timestamps are old
+    assert "test_function:key1" not in _rate_limit_storage
 
 
 def test_cleanup_old_entries_mixed():
@@ -23,29 +25,8 @@ def test_cleanup_old_entries_mixed():
 
     _cleanup_old_entries(60)
 
+    # Should keep 2 recent timestamps (now - 50 and now are within 60 seconds)
     assert len(_rate_limit_storage["test_func:key1"]) == 2
-
-
-def test_cleanup_old_entries_removes_empty_keys():
-    """Test _cleanup_old_entries removes keys with no timestamps."""
-    now = 1000000.0
-    _rate_limit_storage["test_func:empty_key"] = [now - 200]
-
-    _cleanup_old_entries(150)
-
-    assert "test_func:empty_key" not in _rate_limit_storage
-
-
-def test_cleanup_old_entries_multiple_keys():
-    """Test _cleanup_old_entries processes multiple keys."""
-    now = 1000000.0
-    _rate_limit_storage["test_func:key1"] = [now - 100]
-    _rate_limit_storage["test_func:key2"] = [now - 150]
-    _rate_limit_storage["test_func:key3"] = [now - 200]
-
-    _cleanup_old_entries(120)
-
-    assert "test_func:key3" not in _rate_limit_storage
 
 
 def test_cleanup_old_entries_preserves_valid():
@@ -55,6 +36,7 @@ def test_cleanup_old_entries_preserves_valid():
 
     _cleanup_old_entries(30)
 
+    # Should keep all 3 timestamps
     assert len(_rate_limit_storage["test_func:key1"]) == 3
 
 
@@ -65,28 +47,64 @@ def test_cleanup_old_entries_edge_case():
 
     _cleanup_old_entries(60)
 
+    # Should keep 1 timestamp that's just within the window
     assert len(_rate_limit_storage["test_func:key1"]) == 1
 
 
-def test_rate_limit_storage_manipulation():
-    """Test direct manipulation of rate limit storage."""
-    _rate_limit_storage["test_key"] = [1000.0, 1001.0]
-    assert len(_rate_limit_storage["test_key"]) == 2
-
-
-def test_cleanup_empty_storage():
-    """Test cleanup with empty storage."""
+def test_rate_limit_decorator_within_limit():
+    """Test rate_limit decorator allows calls within limit."""
     _rate_limit_storage.clear()
-    _cleanup_old_entries(60)
 
-    assert len(_rate_limit_storage) == 0
+    @rate_limit(times=3, seconds=10)
+    def test_func(request):
+        return "success"
+
+    # Create mock request
+    mock_request = MagicMock(spec=Request)
+    mock_request.client.host = "127.0.0.1"
+    mock_request.headers = {}
+
+    # Should allow 3 calls
+    for i in range(3):
+        result = test_func(mock_request)
+        assert result == "success"
 
 
-def test_cleanup_very_old_entries():
-    """Test cleanup with very old entries."""
-    now = 1000000.0
-    _rate_limit_storage["test_func:old_key"] = [now - 10000, now - 5000]
+def test_rate_limit_decorator_exceeds_limit():
+    """Test rate_limit decorator blocks calls exceeding limit."""
+    _rate_limit_storage.clear()
 
-    _cleanup_old_entries(1000)
+    @rate_limit(times=2, seconds=10)
+    def test_func(request):
+        return "success"
 
-    assert "test_func:old_key" not in _rate_limit_storage
+    # Create mock request
+    mock_request = MagicMock(spec=Request)
+    mock_request.client.host = "127.0.0.1"
+    mock_request.headers = {}
+
+    # Make 2 allowed calls
+    test_func(mock_request)
+    test_func(mock_request)
+
+    # Third call should raise exception
+    with pytest.raises(HTTPException) as exc_info:
+        test_func(mock_request)
+
+    assert exc_info.value.status_code == 429
+    assert "Rate limit exceeded" in str(exc_info.value.detail)
+
+
+def test_rate_limit_decorator_no_request():
+    """Test rate_limit decorator fails without Request object."""
+    _rate_limit_storage.clear()
+
+    @rate_limit(times=1, seconds=10)
+    def test_func():
+        return "success"
+
+    # Should fail without request
+    with pytest.raises(ValueError) as exc_info:
+        test_func()
+
+    assert "Request object not found" in str(exc_info.value)

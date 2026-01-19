@@ -9,7 +9,7 @@ import base64
 from io import BytesIO
 from app.core.rate_limit import rate_limit
 
-router = APIRouter(prefix="/api")
+link_router = APIRouter()
 
 
 def normalize_url(url: str) -> str:
@@ -29,13 +29,13 @@ def normalize_url(url: str) -> str:
     return normalized.geturl()
 
 
-@router.post("/link", status_code=status.HTTP_200_OK, response_model=Response)
+@link_router.post("/link", status_code=status.HTTP_200_OK, response_model=Response)
 @rate_limit(times=5, seconds=60)
 def generate_new_link(
     request: Request,
     url: OriginalUrlInput,
     session: SessionDep,
-):
+) :
     """
     Generate a new short link for the provided original URL.
 
@@ -67,8 +67,8 @@ def generate_new_link(
     qr_img.save(buffer, "PNG")
     qr_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
-    return {
-        "status": Status.success,
-        "data": {"link": new_link, "qr": qr_base64},
-        "message": "Successfully generated the link",
-    }
+    return Response(
+        status=Status.success,
+        data={"link": new_link, "qr": qr_base64},
+        message="Successfully generated the link",
+    )

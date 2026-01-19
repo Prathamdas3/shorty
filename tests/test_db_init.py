@@ -139,3 +139,84 @@ def test_session_dep_type():
     from typing import get_type_hints
 
     assert SessionDep is not None
+
+
+def test_database_create_engine_with_invalid_url():
+    """Test _create_engine handles invalid database URLs."""
+    db = Database(url="invalid://url")
+
+    with pytest.raises(Exception):  # Should raise some database connection error
+        db._create_engine()
+
+
+def test_database_session_with_exception_in_context():
+    """Test Database.session handles exceptions in context manager."""
+    db = Database(url="sqlite:///:memory:")
+    session_gen = db.session()
+
+    session = next(session_gen)
+
+    # Simulate an exception during session use
+    with patch.object(session, "rollback") as rollback_mock:
+        try:
+            raise ValueError("Test exception")
+        except ValueError:
+            pass
+        finally:
+            # Send None to trigger finally block
+            try:
+                session_gen.send(None)
+            except StopIteration:
+                pass
+
+    rollback_mock.assert_called()
+
+
+def test_database_session_with_commit_failure():
+    """Test Database.session handles commit failures."""
+    db = Database(url="sqlite:///:memory:")
+    session_gen = db.session()
+
+    session = next(session_gen)
+
+    with patch.object(session, "commit", side_effect=SQLAlchemyError("Commit failed")):
+        with patch.object(session, "rollback") as rollback_mock:
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                pass
+            finally:
+                try:
+                    session_gen.send(None)
+                except StopIteration:
+                    pass
+
+    rollback_mock.assert_called()
+
+
+def test_get_session_with_database_error():
+    """Test get_session handles database connection errors."""
+    db = Database(url="sqlite:///:memory:")
+
+    with patch("app.db.init.db", db):
+        with patch.object(db, "session", side_effect=Exception("DB error")):
+            with pytest.raises(Exception):
+                next(get_session())
+
+
+def test_database_engine_configuration():
+    """Test Database engine is configured with correct parameters."""
+    db = Database(url="sqlite:///:memory:", pool_size=10, pool_recycle=1800, echo=True)
+
+    assert db.engine is not None
+    # SQLite doesn't use pool_size, but engine should still be created
+
+
+def test_database_session_context_manager():
+    """Test Database.session works as context manager."""
+    db = Database(url="sqlite:///:memory:")
+
+    with db.session() as session:
+        assert session is not None
+        assert hasattr(session, "add")
+        assert hasattr(session, "commit")

@@ -1,5 +1,5 @@
 import pytest
-from app.api.link import normalize_url
+from app.api.routes.link import normalize_url
 
 
 def test_normalize_url_lowercase_scheme():

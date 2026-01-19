@@ -184,3 +184,71 @@ def test_sort_id_with_special_chars():
     """Test SortIDInput allows special characters."""
     input_data = SortIDInput(sort_id="a-b_c.d")
     assert input_data.sort_id == "a-b_c.d"
+
+
+def test_sort_id_none_value():
+    """Test SortIDInput validator handles None value."""
+    with pytest.raises(ValidationError) as exc_info:
+        SortIDInput(sort_id=None)
+    assert "missing" in str(exc_info.value).lower()
+
+
+def test_sort_id_non_string_type():
+    """Test SortIDInput validator handles non-string types."""
+    with pytest.raises(ValidationError) as exc_info:
+        SortIDInput(sort_id=123)
+    assert "string" in str(exc_info.value).lower()
+
+
+def test_sort_id_whitespace_only():
+    """Test SortIDInput validator handles whitespace-only strings."""
+    with pytest.raises(ValidationError) as exc_info:
+        SortIDInput(sort_id="   ")
+    assert "empty" in str(exc_info.value).lower()
+
+
+def test_original_url_validator_called():
+    """Test OriginalUrlInput validator is executed."""
+    # This should pass all checks
+    url = "https://example.com"
+    input_data = OriginalUrlInput(link=url)
+    assert str(input_data.link) == url
+
+
+def test_original_url_invalid_scheme_validator():
+    """Test OriginalUrlInput validator blocks invalid schemes."""
+    with pytest.raises(ValidationError) as exc_info:
+        OriginalUrlInput(link="ftp://example.com")
+    assert "http" in str(exc_info.value).lower()
+
+
+def test_original_url_localhost_validator():
+    """Test OriginalUrlInput validator blocks localhost."""
+    with pytest.raises(ValidationError) as exc_info:
+        OriginalUrlInput(link="http://localhost")
+    assert "localhost" in str(exc_info.value).lower()
+
+
+def test_original_url_private_ip_validator():
+    """Test OriginalUrlInput validator blocks private IPs."""
+    # This test may not work if DNS resolution fails, but we can test the logic
+    with patch("socket.gethostbyname", return_value="192.168.1.1"):
+        with pytest.raises(ValidationError) as exc_info:
+            OriginalUrlInput(link="http://private.example.com")
+        assert "private" in str(exc_info.value).lower()
+
+
+def test_original_url_length_validator():
+    """Test OriginalUrlInput validator blocks URLs that are too long."""
+    long_url = "https://example.com/" + "a" * 2000
+    with pytest.raises(ValidationError) as exc_info:
+        OriginalUrlInput(link=long_url)
+    assert "long" in str(exc_info.value).lower()
+
+
+def test_original_url_dns_failure_handling():
+    """Test OriginalUrlInput validator handles DNS resolution failures."""
+    with patch("socket.gethostbyname", side_effect=socket.gaierror("DNS failure")):
+        # Should not raise validation error due to DNS failure
+        input_data = OriginalUrlInput(link="https://nonexistent-domain-12345.com")
+        assert input_data is not None
